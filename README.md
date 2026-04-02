@@ -18,15 +18,19 @@ dotnet build
 dotnet run
 ```
 
+Полный перечень имён и описаний (как у инструментов в MCP) — **[docs/MCP-TOOLS.md](docs/MCP-TOOLS.md)**. Тот же источник даёт `mcp-tools.manifest.json` в корне проекта. Обновить оба файла из кода:
+
+`dotnet run --project tools/ExportMcpManifest -- --write` (рабочий каталог — корень `roslyn-mcp`).
+
 ## Публикация exe (для MCP в Cursor)
 
 Чтобы Cursor запускал MCP из **exe**, а не из проекта, сборка не будет блокироваться запущенным процессом.
 
-В **csproj** заданы `RuntimeIdentifier=win-x64` и `SelfContained=true` — самодостаточная сборка (рантайм в папке, не зависит от установленного .NET в системе). Достаточно:
+В **csproj** заданы `RuntimeIdentifiers` (в т.ч. `win-x64`) и `SelfContained=true` — самодостаточная сборка (рантайм в папке, не зависит от установленного .NET в системе). Достаточно:
 
 ```bash
 cd roslyn-mcp
-dotnet publish -c Release -o publish
+dotnet publish -c Release -r win-x64 -o publish
 ```
 
 Exe появится в `roslyn-mcp/publish/RoslynMcp.exe`. В конфиге MCP в Cursor укажи этот exe (command — полный путь к нему, args — `[]`).
@@ -100,7 +104,7 @@ claude mcp add --transport stdio roslyn -- dotnet run --project .
 | `roslyn_get_symbol_at_position` | Символ в позиции (файл + строка + столбец, 1-based): kind и имя. Опционально `solution_or_project_path` — тогда в ответе Qualified (полное имя). Параметры: `file_path`, `line`, `column`. |
 | `roslyn_find_usages` | Все ссылки на символ в solution/project. В выводе: квалифицированное имя (FullyQualifiedFormat), место определения (Definition:), затем список ссылок. Параметры: `solution_or_project_path`, `file_path`, `line`, `column` (на идентификаторе). |
 | `roslyn_go_to_definition` | Переход к определению символа: по позиции возвращает file:line:column объявления (для partial — несколько строк). Параметры: `solution_or_project_path`, `file_path`, `line`, `column`. |
-| `roslyn_rename` | Переименование символа по solution. Параметры: `solution_or_project_path`, `file_path`, `line`, `column`, `new_name`, опционально `apply` (превью/запись), `rename_in_comments`, `rename_in_strings`, `rename_overloads`, `rename_file` (аналог опций в VS). |
+| `roslyn_rename` | Переименование символа по solution. Параметры: `solution_or_project_path`, `file_path`, `line`, `column`, `new_name`, опционально `apply` (превью/запись), `rename_in_comments`, `rename_in_strings`, `rename_overloads`, `rename_file` (аналог опций в VS), `rename_partial_type_files` (для топ-уровневого типа — переименовать все `TypeName.cs` / `TypeName.*.cs` в проекте под новое имя типа). |
 | `roslyn_get_code_actions` | Список Quick Actions / рефакторингов в позиции (как лампочка в VS). Параметры: `solution_or_project_path`, `file_path`, `line`, `column`. Опционально `end_line`, `end_column` — диапазон выделения для рефакторингов вроде Extract method / Extract local function. Возвращает нумерованный список. |
 | `roslyn_apply_code_action` | Применить выбранное code action. Параметры: `solution_or_project_path`, `file_path`, `line`, `column`, `action_index` (0-based). Опционально: `end_line`, `end_column` (тот же диапазон, что при get); `fix_all_scope`: `"document"` \| `"project"` \| `"solution"`; `constant_name` — для Introduce constant; `action_options` — JSON-объект опций для действий с диалогом (Extract interface, Extract base class: имена членов и т.д.). Подробнее: [REFACTORINGS.md](REFACTORINGS.md). |
 | `roslyn_get_diagnostics` | Диагностики компиляции и анализаторов по solution/project. Учитывается .editorconfig целевого проекта: исключаются диагностики с `dotnet_diagnostic.<Id>.severity = none` и уровень Hidden от анализаторов. Параметры: `solution_or_project_path`, опционально `file_path`. |

@@ -251,4 +251,35 @@ public static class ToolSchemas
             },
             required = new[] { "solution_or_project_path", "file_path", "line", "column" }
         });
+
+    public static JsonElement MoveMembersToPartialFile() =>
+        ToElement(new
+        {
+            type = "object",
+            properties = new
+            {
+                solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj." },
+                file_path = new { type = "string", description = "Путь к исходному .cs файлу с типом." },
+                line = new { type = "integer", description = "Строка (1-based): курсор на имени типа или внутри тела." },
+                column = new { type = "integer", description = "Столбец (1-based)." },
+                member_names = new { type = "array", items = new { type = "string" }, description = "Имена переносимых членов (методы, поля, свойства, вложенные типы). Конструктор: имя типа или .ctor; индексатор: this; все перегрузки с одним именем переносятся вместе." },
+                output_file_path = new { type = "string", description = "Полный путь к новому .cs файлу (partial-часть). Не должен существовать при apply: true." },
+                apply = new { type = "boolean", description = "false — только превью текста; true — записать изменения и добавить файл в проект (TryApplyChanges)." },
+                add_dependent_upon = new { type = "boolean", description = "Опционально. После apply: true (по умолчанию) — добавить в .csproj Compile Update с DependentUpon на исходный файл; false — не трогать .csproj." }
+            },
+            required = new[] { "solution_or_project_path", "file_path", "line", "column", "member_names", "output_file_path" }
+        });
+
+    public static JsonElement SyncDependentUponPartials() =>
+        ToElement(new
+        {
+            type = "object",
+            properties = new
+            {
+                solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj." },
+                project_path = new { type = "string", description = "Опционально. Полный путь к одному .csproj — только этот проект." },
+                dry_run = new { type = "boolean", description = "true — только отчёт; false — записать .csproj." }
+            },
+            required = new[] { "solution_or_project_path" }
+        });
 }

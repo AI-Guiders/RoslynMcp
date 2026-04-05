@@ -117,6 +117,20 @@ internal static class ToolCatalog
             Description =
                 "Generate Equals and GetHashCode без диалога: по позиции на класс — override по выбранным полям/свойствам. Опционально: member_names, insert_into_file.",
             InputSchema = ToolSchemas.GenerateEqualsGetHashCode()
+        },
+        new()
+        {
+            Name = "roslyn_move_members_to_partial_file",
+            Description =
+                "Перенести выбранные члены класса/структуры в новый .cs файл как вторую часть partial: те же using/namespace, в исходнике добавляется partial. member_names: имена методов/полей/свойств; конструктор — имя типа или .ctor; индексатор — this; перегрузки одного имени уходят вместе. output_file_path — путь нового файла (не должен существовать при apply). apply: false — превью, true — запись через TryApplyChanges (и новый файл в проекте). add_dependent_upon: по умолчанию true — после apply проставить DependentUpon в .csproj на исходный файл.",
+            InputSchema = ToolSchemas.MoveMembersToPartialFile()
+        },
+        new()
+        {
+            Name = "roslyn_sync_dependent_upon_partials",
+            Description =
+                "Массово проставить DependentUpon для partial-файлов вида Type.Part.cs под Type.cs в той же папке (эвристика как в IDE). solution_or_project_path — .sln или .csproj; опционально project_path — один проект; dry_run — только отчёт без записи.",
+            InputSchema = ToolSchemas.SyncDependentUponPartials()
         }
     ];
 }

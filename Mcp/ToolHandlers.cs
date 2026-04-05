@@ -24,12 +24,14 @@ public static class ToolHandlers
             "roslyn_get_diagnostics" => GetDiagnosticsAsync(args, cancellationToken),
             "roslyn_get_solution_structure" => GetSolutionStructureAsync(args, cancellationToken),
             "roslyn_sync_namespaces" => SyncNamespacesAsync(args, cancellationToken),
+            "roslyn_sync_dependent_upon_partials" => SyncDependentUponPartialsAsync(args, cancellationToken),
             "roslyn_resolve_breakpoint" => ResolveBreakpointAsync(args, cancellationToken),
             "roslyn_generate_interface_from_class" => GenerateInterfaceFromClassAsync(args, cancellationToken),
             "roslyn_generate_base_class_from_class" => GenerateBaseClassFromClassAsync(args, cancellationToken),
             "roslyn_generate_overrides" => GenerateOverridesAsync(args, cancellationToken),
             "roslyn_generate_constructor_from_members" => GenerateConstructorFromMembersAsync(args, cancellationToken),
             "roslyn_generate_equals_gethashcode" => GenerateEqualsGetHashCodeAsync(args, cancellationToken),
+            "roslyn_move_members_to_partial_file" => MoveMembersToPartialFileAsync(args, cancellationToken),
             _ => throw new ArgumentException($"Unknown tool: {name}.", nameof(name))
         };
     }
@@ -198,6 +200,15 @@ public static class ToolHandlers
         return SyncNamespaces.SyncAsync(solutionPath!, dryRun, projectPath, cancellationToken: ct);
     }
 
+    private static Task<string> SyncDependentUponPartialsAsync(IReadOnlyDictionary<string, JsonElement> args, CancellationToken ct)
+    {
+        if (!TryGetString(args, "solution_or_project_path", out var solutionPath))
+            throw new ArgumentException("solution_or_project_path (string) is required.");
+        TryGetString(args, "project_path", out var projectPath);
+        var dryRun = args.TryGetValue("dry_run", out var dryRunEl) && dryRunEl.ValueKind == JsonValueKind.True;
+        return SyncDependentUponPartials.SyncAsync(solutionPath!, projectPath, dryRun, cancellationToken: ct);
+    }
+
     private static Task<string> ResolveBreakpointAsync(IReadOnlyDictionary<string, JsonElement> args, CancellationToken ct)
     {
         if (!TryGetString(args, "solution_or_project_path", out var solutionPath))
@@ -294,6 +305,25 @@ public static class ToolHandlers
             memberNames = arr;
         var insertIntoFile = args.TryGetValue("insert_into_file", out var insEl) && insEl.ValueKind == JsonValueKind.True;
         return GenerateEqualsGetHashCode.GenerateEqualsGetHashCodeAsync(solutionPath!, filePath!, line, column, memberNames, insertIntoFile, ct);
+    }
+
+    private static Task<string> MoveMembersToPartialFileAsync(IReadOnlyDictionary<string, JsonElement> args, CancellationToken ct)
+    {
+        if (!TryGetString(args, "solution_or_project_path", out var solutionPath))
+            throw new ArgumentException("solution_or_project_path (string) is required.");
+        if (!TryGetString(args, "file_path", out var filePath))
+            throw new ArgumentException("file_path (string) is required.");
+        if (!TryGetInt(args, "line", out var line) || line < 1)
+            throw new ArgumentException("line (integer >= 1) is required.");
+        if (!TryGetInt(args, "column", out var column) || column < 1)
+            throw new ArgumentException("column (integer >= 1) is required.");
+        if (!args.TryGetValue("member_names", out var mnEl) || mnEl.ValueKind != JsonValueKind.Array || GetStringArray(mnEl) is not string[] memberArr || memberArr.Length == 0)
+            throw new ArgumentException("member_names (non-empty array of strings) is required.");
+        if (!TryGetString(args, "output_file_path", out var outputFilePath))
+            throw new ArgumentException("output_file_path (string) is required.");
+        var apply = args.TryGetValue("apply", out var applyEl) && applyEl.ValueKind == JsonValueKind.True;
+        var addDependentUpon = !(args.TryGetValue("add_dependent_upon", out var adEl) && adEl.ValueKind == JsonValueKind.False);
+        return MoveMembersToPartialFile.MoveAsync(solutionPath!, filePath!, line, column, memberArr, outputFilePath!, apply, addDependentUpon, ct);
     }
 
     private static bool TryGetString(IReadOnlyDictionary<string, JsonElement> args, string key, out string? value)

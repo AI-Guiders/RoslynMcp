@@ -1,10 +1,14 @@
 using System.Collections.Frozen;
 using System.Text.Json;
+using Microsoft.Build.Locator;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RoslynMcp.Mcp;
 using Tool = ModelContextProtocol.Protocol.Tool;
+
+// MSBuildWorkspace и разрешение Analyzer/SourceGenerator-пакетов (в т.ч. CommunityToolkit.Mvvm) требуют зарегистрированный MSBuild.
+MSBuildLocator.RegisterDefaults();
 
 var toolsList = ToolCatalog.Build();
 

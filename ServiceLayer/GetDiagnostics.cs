@@ -3,6 +3,7 @@ using System.Text;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Host;
 using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.CodeAnalysis.Text;
 
@@ -11,6 +12,16 @@ namespace RoslynMcp.ServiceLayer;
 /// <summary>Диагностики компиляции (ошибки, предупреждения) по solution/project. Опционально — только по одному файлу.</summary>
 public static class GetDiagnostics
 {
+    /// <summary>
+    /// По умолчанию MSBuildWorkspace делает design-time build — без полного конвейёра компиляции source generators
+    /// (CommunityToolkit.Mvvm и др.) могут не попасть в <see cref="Compilation"/>. Отключаем design-only режим.
+    /// </summary>
+    private static readonly ImmutableDictionary<string, string> MsbuildWorkspaceGlobalProperties =
+        ImmutableDictionary.CreateRange<string, string>([
+            new("DesignTimeBuild", "false"),
+            new("SkipCompilerExecution", "false"),
+        ]);
+
     private static string NormalizePath(string path)
     {
         var p = Path.GetFullPath(path.Trim());
@@ -28,8 +39,26 @@ public static class GetDiagnostics
             || normalizedPath.Contains("/bin/", StringComparison.Ordinal);
     }
 
-    /// <summary>Эффективная серьёзность по опциям компиляции (SpecificDiagnosticOptions, GeneralDiagnosticOption).
-    /// При загрузке через MSBuildWorkspace опции берутся из проекта; editorconfig может быть уже смержен в них (зависит от таргетов).</summary>
+    /// <summary>
+    /// Запускает source generators и возвращает <see cref="Compilation"/>.
+    /// После <see cref="Project.GetSourceGeneratedDocumentsAsync"/> обновляется <see cref="Workspace.CurrentSolution"/>;
+    /// старый снимок <see cref="Project"/> остаётся без сгенерированных синтаксических деревьев — повторно берём проект из workspace.
+    /// </summary>
+    private static async Task<Compilation?> GetCompilationAfterSourceGeneratorsAsync(
+        Workspace workspace,
+        ProjectId projectId,
+        CancellationToken cancellationToken)
+    {
+        var project = workspace.CurrentSolution.GetProject(projectId);
+        if (project is null)
+            return null;
+        await project.GetSourceGeneratedDocumentsAsync(cancellationToken).ConfigureAwait(false);
+        project = workspace.CurrentSolution.GetProject(projectId);
+        if (project is null)
+            return null;
+        return await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private static (DiagnosticSeverity effective, bool isSuppressed) GetEffectiveSeverity(Diagnostic d, CompilationOptions options)
     {
         var report = options.SpecificDiagnosticOptions.GetValueOrDefault(d.Id, ReportDiagnostic.Default);
@@ -68,6 +97,7 @@ public static class GetDiagnostics
     }
 
     private static async Task<(int totalAfterPath, int excludedSeverityNone, int excludedSuppress)> CollectDiagnosticsFromSolution(
+        Workspace workspace,
         Solution solution,
         string? targetPath,
         List<(Diagnostic d, DiagnosticSeverity effectiveSeverity)> allDiagnostics,
@@ -76,17 +106,52 @@ public static class GetDiagnostics
         var totalAfterPath = 0;
         var excludedSeverityNone = 0;
         var excludedSuppress = 0;
-        foreach (var project in solution.Projects)
+        foreach (var projectId in solution.ProjectIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var projectForPaths = workspace.CurrentSolution.GetProject(projectId);
+            if (projectForPaths is null)
+                continue;
+            var projectDir = Path.GetDirectoryName(projectForPaths.FilePath) ?? "";
+            var severityNoneIds = EditorConfigStyle.GetDiagnosticIdsSeverityNone(projectDir);
+
+            var comp = await GetCompilationAfterSourceGeneratorsAsync(workspace, projectId, cancellationToken).ConfigureAwait(false);
+            if (comp is null)
+                continue;
+            var compOptions = comp.Options;
+
+            foreach (var d in comp.GetDiagnostics(cancellationToken))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var projectDir = Path.GetDirectoryName(project.FilePath) ?? "";
-                var severityNoneIds = EditorConfigStyle.GetDiagnosticIdsSeverityNone(projectDir);
+                if (d.Location.SourceTree?.FilePath is null) continue;
+                var treePath = NormalizePath(d.Location.SourceTree.FilePath);
+                if (IsBuildArtifactPath(treePath)) continue;
+                if (targetPath is not null && !string.Equals(treePath, targetPath, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                totalAfterPath++;
+                if (severityNoneIds.Contains(d.Id)) { excludedSeverityNone++; continue; }
+                var (effective, isSuppressed) = GetEffectiveSeverity(d, compOptions);
+                if (isSuppressed) { excludedSuppress++; continue; }
+                allDiagnostics.Add((d, effective));
+            }
 
-                var comp = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
-                if (comp is null) continue;
-                var compOptions = comp.Options;
-
-                foreach (var d in comp.GetDiagnostics(cancellationToken))
+            var project = workspace.CurrentSolution.GetProject(projectId);
+            if (project is null)
+                continue;
+            var analyzers = project.AnalyzerReferences
+                .SelectMany(r => r.GetAnalyzers(project.Language))
+                .ToImmutableArray();
+            if (!analyzers.IsEmpty)
+            {
+                var analyzerOptions = new AnalyzerOptions(ImmutableArray<AdditionalText>.Empty);
+                var options = new CompilationWithAnalyzersOptions(
+                    analyzerOptions,
+                    onAnalyzerException: (_, _, _) => { },
+                    concurrentAnalysis: true,
+                    logAnalyzerExecutionTime: false,
+                    reportSuppressedDiagnostics: false);
+                var cwa = new CompilationWithAnalyzers(comp, analyzers, options);
+                var result = await cwa.GetAnalysisResultAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var d in result.GetAllDiagnostics())
                 {
                     if (d.Location.SourceTree?.FilePath is null) continue;
                     var treePath = NormalizePath(d.Location.SourceTree.FilePath);
@@ -99,35 +164,8 @@ public static class GetDiagnostics
                     if (isSuppressed) { excludedSuppress++; continue; }
                     allDiagnostics.Add((d, effective));
                 }
-                var analyzers = project.AnalyzerReferences
-                    .SelectMany(r => r.GetAnalyzers(project.Language))
-                    .ToImmutableArray();
-                if (!analyzers.IsEmpty)
-                {
-                    var analyzerOptions = new AnalyzerOptions(ImmutableArray<AdditionalText>.Empty);
-                    var options = new CompilationWithAnalyzersOptions(
-                        analyzerOptions,
-                        onAnalyzerException: (_, _, _) => { },
-                        concurrentAnalysis: true,
-                        logAnalyzerExecutionTime: false,
-                        reportSuppressedDiagnostics: false);
-                    var cwa = new CompilationWithAnalyzers(comp, analyzers, options);
-                    var result = await cwa.GetAnalysisResultAsync(cancellationToken).ConfigureAwait(false);
-                    foreach (var d in result.GetAllDiagnostics())
-                    {
-                        if (d.Location.SourceTree?.FilePath is null) continue;
-                        var treePath = NormalizePath(d.Location.SourceTree.FilePath);
-                        if (IsBuildArtifactPath(treePath)) continue;
-                        if (targetPath is not null && !string.Equals(treePath, targetPath, StringComparison.OrdinalIgnoreCase))
-                            continue;
-                        totalAfterPath++;
-                        if (severityNoneIds.Contains(d.Id)) { excludedSeverityNone++; continue; }
-                        var (effective, isSuppressed) = GetEffectiveSeverity(d, compOptions);
-                        if (isSuppressed) { excludedSuppress++; continue; }
-                        allDiagnostics.Add((d, effective));
-                    }
-                }
             }
+        }
         return (totalAfterPath, excludedSeverityNone, excludedSuppress);
     }
 
@@ -162,13 +200,13 @@ public static class GetDiagnostics
             foreach (var projectPath in projectPaths)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var workspace = MSBuildWorkspace.Create();
+                var workspace = MSBuildWorkspace.Create(MsbuildWorkspaceGlobalProperties);
                 try
                 {
                     var solution = (await workspace.OpenProjectAsync(projectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
                     if (solution is not null)
                     {
-                        var (t, n, s) = await CollectDiagnosticsFromSolution(solution, targetPath, allDiagnostics, cancellationToken).ConfigureAwait(false);
+                        var (t, n, s) = await CollectDiagnosticsFromSolution(workspace, solution, targetPath, allDiagnostics, cancellationToken).ConfigureAwait(false);
                         totalAfterPath += t;
                         excludedSeverityNone += n;
                         excludedSuppress += s;
@@ -185,7 +223,7 @@ public static class GetDiagnostics
             Solution? solution = null;
             try
             {
-                var workspace = MSBuildWorkspace.Create();
+                var workspace = MSBuildWorkspace.Create(MsbuildWorkspaceGlobalProperties);
                 if (string.Equals(ext, ".sln", StringComparison.OrdinalIgnoreCase))
                     solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
                 else
@@ -194,7 +232,7 @@ public static class GetDiagnostics
                 if (solution is null)
                     return "Error: failed to open solution.";
 
-                var (t, n, s) = await CollectDiagnosticsFromSolution(solution, targetPath, allDiagnostics, cancellationToken).ConfigureAwait(false);
+                var (t, n, s) = await CollectDiagnosticsFromSolution(workspace, solution, targetPath, allDiagnostics, cancellationToken).ConfigureAwait(false);
                 totalAfterPath += t;
                 excludedSeverityNone += n;
                 excludedSuppress += s;

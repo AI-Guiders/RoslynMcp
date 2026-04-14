@@ -16,8 +16,6 @@ RoslynMcp всегда передаёт в MSBuild свойство **`RoslynMcp
 
 ### Source generators (MVVM Toolkit и др.)
 
-Это **отдельно** от блокировки DLL анализаторов (раздел выше).
-
 Для проектов с **source generators** (например `[ObservableProperty]` / `[RelayCommand]` в CommunityToolkit.Mvvm) `roslyn_get_diagnostics` поднимает сгенерированные документы через **`GetSourceGeneratedDocumentsAsync`** и берёт проект/компиляцию из актуального **`workspace.CurrentSolution`** — см. **`ServiceLayer/GetDiagnostics.cs`**; глобальные свойства MSBuild для workspace — в **`RoslynMcpWorkspaceProperties`**. Раньше без этого конвейёра при зелёном **`dotnet build`** иногда возникали ложные **CS1061**; это **учтено в реализации**. Если вывод инструмента всё же расходится со сборкой (краевой случай), ориентир — **`dotnet build`**. Подробнее — **[docs/source-generators-and-diagnostics.md](docs/source-generators-and-diagnostics.md)**.
 
 ## Требования

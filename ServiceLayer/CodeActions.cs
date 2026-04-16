@@ -57,6 +57,33 @@ internal sealed class CompilationDiagnosticProvider : FixAllContext.DiagnosticPr
 /// <summary>Список code actions (рефакторинги/фиксы) в позиции и применение выбранного. Провайдеры: Features-сборки + CodeFixProvider из AnalyzerReferences проекта (например фикс SYSLIB1045 из рантайма).</summary>
 public static class CodeActions
 {
+    /// <summary>
+    /// Возвращает типы сборки, доступные для обхода (рефакторинги/фиксы). <see cref="Assembly.GetTypes"/> бросает
+    /// <see cref="ReflectionTypeLoadException"/>, если отдельные типы не резолвятся (несовместимые анализаторы, missing deps).
+    /// </summary>
+    private static IEnumerable<Type> EnumerateLoadableTypes(Assembly assembly)
+    {
+        Type[] types;
+        try
+        {
+            types = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            types = ex.Types.Where(static t => t is not null).Cast<Type>().ToArray();
+        }
+        catch (TypeLoadException)
+        {
+            yield break;
+        }
+
+        foreach (var type in types)
+        {
+            if (type is not null)
+                yield return type;
+        }
+    }
+
     private static string NormalizePath(string path)
     {
         var p = Path.GetFullPath(path.Trim());
@@ -70,7 +97,7 @@ public static class CodeActions
         var assemblies = new[] { typeof(CodeRefactoringProvider).Assembly, Assembly.Load("Microsoft.CodeAnalysis.CSharp.Features"), Assembly.Load("Microsoft.CodeAnalysis.Features") };
         foreach (var asm in assemblies.Distinct())
         {
-            foreach (var type in asm.GetTypes())
+            foreach (var type in EnumerateLoadableTypes(asm))
             {
                 if (type.IsAbstract || !typeof(CodeRefactoringProvider).IsAssignableFrom(type)) continue;
                 try
@@ -90,7 +117,7 @@ public static class CodeActions
         var assemblies = new[] { typeof(CodeFixProvider).Assembly, Assembly.Load("Microsoft.CodeAnalysis.CSharp.Features"), Assembly.Load("Microsoft.CodeAnalysis.Features") };
         foreach (var asm in assemblies.Distinct())
         {
-            foreach (var type in asm.GetTypes())
+            foreach (var type in EnumerateLoadableTypes(asm))
             {
                 if (type.IsAbstract || !typeof(CodeFixProvider).IsAssignableFrom(type)) continue;
                 try
@@ -115,7 +142,10 @@ public static class CodeActions
             if (analyzers.Length == 0) continue;
             var asm = analyzers[0].GetType().Assembly;
             if (!seen.Add(asm)) continue;
-            foreach (var type in asm.GetTypes())
+            // Сборка из PackageReference решения часто собрана под другую версию Roslyn, чем хост MCP — тогда GetTypes/Activator дают TypeLoadException.
+            if (string.Equals(asm.GetName().Name, "Microsoft.CodeAnalysis.Analyzers", StringComparison.OrdinalIgnoreCase))
+                continue;
+            foreach (var type in EnumerateLoadableTypes(asm))
             {
                 if (type.IsAbstract || !typeof(CodeFixProvider).IsAssignableFrom(type)) continue;
                 try

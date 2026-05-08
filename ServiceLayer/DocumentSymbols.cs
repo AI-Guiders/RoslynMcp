@@ -55,7 +55,7 @@ public static partial class DocumentSymbols
             };
 
             if (tuple.kind is not null && tuple.name is not null)
-                sb.AppendLine($"{tuple.line,5}  {tuple.kind,-12} {tuple.name}");
+                sb.AppendLineInvariant($"{tuple.line,5}  {tuple.kind,-12} {tuple.name}");
         }
 
         if (sb.Length == 0)

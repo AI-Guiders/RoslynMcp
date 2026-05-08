@@ -34,10 +34,7 @@ public static class GoToDefinition
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";
@@ -105,16 +102,16 @@ public static class GoToDefinition
 
             var sb = new StringBuilder();
             var docPath = document.FilePath ?? filePath;
-            sb.AppendLine($"# Document: {docPath} (total_lines={lines.Count}, line_{line}_length={lineLen})");
-            sb.AppendLine($"# Definition(s) of {symbol.Kind} {symbol.Name}");
+            sb.AppendLineInvariant($"# Document: {docPath} (total_lines={lines.Count}, line_{line}_length={lineLen})");
+            sb.AppendLineInvariant($"# Definition(s) of {symbol.Kind} {symbol.Name}");
             sb.AppendLine();
             foreach (var loc in defLocations)
             {
                 if (loc.SourceTree?.FilePath is null) continue;
                 var span = loc.GetLineSpan();
-                sb.AppendLine($"{loc.SourceTree.FilePath}:{span.StartLinePosition.Line + 1}:{span.StartLinePosition.Character + 1}");
+                sb.AppendLineInvariant($"{loc.SourceTree.FilePath}:{span.StartLinePosition.Line + 1}:{span.StartLinePosition.Character + 1}");
             }
-            sb.AppendLine().AppendLine($"Total: {defLocations.Count} definition(s)");
+            sb.AppendLine().AppendLineInvariant($"Total: {defLocations.Count} definition(s)");
             return sb.ToString();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("slnx") || ex.Message.Contains("Slnx"))

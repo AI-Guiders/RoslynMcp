@@ -71,10 +71,7 @@ public static class GetWorkspaceNavigationContext
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -496,7 +493,7 @@ public static class GetWorkspaceNavigationContext
         }
     }
 
-    private static IEnumerable<string> EnumeratePartialTypeNames(string anchorPath)
+    private static List<string> EnumeratePartialTypeNames(string anchorPath)
     {
         string text;
         try
@@ -526,7 +523,7 @@ public static class GetWorkspaceNavigationContext
             .ToList();
     }
 
-    private static IEnumerable<string> FindPartialPeers(IReadOnlyList<string> allCs, string anchor, string typeName)
+    private static List<string> FindPartialPeers(IReadOnlyList<string> allCs, string anchor, string typeName)
     {
         var rx = new Regex($@"\bpartial\s+(?:class|struct|record)\s+{Regex.Escape(typeName)}\b", RegexOptions.CultureInvariant);
         var list = new List<string>();

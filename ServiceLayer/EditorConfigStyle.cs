@@ -42,7 +42,7 @@ public static class EditorConfigStyle
         {
             var parsed = ParseEditorConfig(configPaths[i]);
             if (parsed != null)
-                merged = merged == null ? parsed : merged.MergeWith(parsed);
+                merged = parsed;
         }
 
         return merged ?? EditorStyleOptions.Default;
@@ -79,7 +79,7 @@ public static class EditorConfigStyle
                     var trimmed = line.Trim();
                     if (trimmed.StartsWith('['))
                     {
-                        inRelevantSection = trimmed.Contains("*", StringComparison.Ordinal) && (trimmed.Contains("*.cs", StringComparison.OrdinalIgnoreCase) || trimmed == "[*]");
+                        inRelevantSection = trimmed.Contains('*') && (trimmed.Contains("*.cs", StringComparison.OrdinalIgnoreCase) || trimmed == "[*]");
                         continue;
                     }
                     if (!inRelevantSection)
@@ -129,7 +129,7 @@ public static class EditorConfigStyle
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
-                if (trimmed.StartsWith("[", StringComparison.Ordinal))
+                if (trimmed.StartsWith('['))
                 {
                     inCsSection = trimmed.Contains("*.cs", StringComparison.OrdinalIgnoreCase);
                     continue;
@@ -199,6 +199,8 @@ public sealed class EditorStyleOptions
     public int IndentSize { get; }
     public int TabWidth { get; }
 
+    private readonly string _newLine = Environment.NewLine;
+
     /// <summary>Строка отступа для одного уровня (пробелы или таб по indent_style/indent_size/tab_width).</summary>
     public string IndentString =>
         IndentStyle.Equals("tab", StringComparison.OrdinalIgnoreCase)
@@ -225,21 +227,6 @@ public sealed class EditorStyleOptions
         IndentStyle = indentStyle ?? "space";
         IndentSize = indentSize;
         TabWidth = tabWidth;
-    }
-
-    /// <summary>Сливает с другим набором опций: ненулевые/не-дефолтные значения из other перезаписывают.</summary>
-    public EditorStyleOptions MergeWith(EditorStyleOptions other)
-    {
-        return new EditorStyleOptions(
-            preferIntrinsicTypeNames: other.PreferIntrinsicTypeNames,
-            preferVarForBuiltInTypes: other.PreferVarForBuiltInTypes,
-            preferVarWhenTypeApparent: other.PreferVarWhenTypeApparent,
-            preferVarElsewhere: other.PreferVarElsewhere,
-            preferBraces: other.PreferBraces,
-            newLineBeforeOpenBrace: other.NewLineBeforeOpenBrace,
-            indentStyle: other.IndentStyle,
-            indentSize: other.IndentSize,
-            tabWidth: other.TabWidth);
     }
 
     /// <summary>Заменяет отображаемые имена типов .NET на ключевые слова C# (Int32 → int и т.д.), если PreferIntrinsicTypeNames = true.</summary>
@@ -285,7 +272,7 @@ public sealed class EditorStyleOptions
     }
 
     /// <summary>Новая строка перед открывающей скобкой по опции csharp_new_line_before_open_brace (all/none и т.д.).</summary>
-    public string NewLine => Environment.NewLine;
+    public string NewLine => _newLine;
 
     /// <summary>Для однострочного блока: если PreferBraces = true, возвращает " { }"; иначе ";" (для выражений мы всё равно генерируем с телом).</summary>
     public string OpenBraceOrSpace => PreferBraces ? " {" : "";

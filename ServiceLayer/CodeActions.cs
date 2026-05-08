@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Reflection;
 using System.Linq;
 using System.Text;
@@ -91,7 +92,7 @@ public static class CodeActions
         return p;
     }
 
-    private static IEnumerable<CodeRefactoringProvider> GetRefactoringProviders()
+    private static List<CodeRefactoringProvider> GetRefactoringProviders()
     {
         var list = new List<CodeRefactoringProvider>();
         var assemblies = new[] { typeof(CodeRefactoringProvider).Assembly, Assembly.Load("Microsoft.CodeAnalysis.CSharp.Features"), Assembly.Load("Microsoft.CodeAnalysis.Features") };
@@ -111,7 +112,7 @@ public static class CodeActions
         return list;
     }
 
-    private static IEnumerable<CodeFixProvider> GetCodeFixProvidersBuiltIn()
+    private static List<CodeFixProvider> GetCodeFixProvidersBuiltIn()
     {
         var list = new List<CodeFixProvider>();
         var assemblies = new[] { typeof(CodeFixProvider).Assembly, Assembly.Load("Microsoft.CodeAnalysis.CSharp.Features"), Assembly.Load("Microsoft.CodeAnalysis.Features") };
@@ -132,7 +133,7 @@ public static class CodeActions
     }
 
     /// <summary>Провайдеры из сборок проекта (AnalyzerReferences). Сюда попадают фиксы из рантайма (например SYSLIB1045 — Convert to GeneratedRegexAttribute).</summary>
-    private static IEnumerable<CodeFixProvider> GetCodeFixProvidersFromProject(Project project)
+    private static List<CodeFixProvider> GetCodeFixProvidersFromProject(Project project)
     {
         var list = new List<CodeFixProvider>();
         var seen = new HashSet<Assembly>();
@@ -297,8 +298,8 @@ public static class CodeActions
         }
         if (value is int or long)
         {
-            if (targetType == typeof(int)) return Convert.ToInt32(value);
-            if (targetType == typeof(long)) return Convert.ToInt64(value);
+            if (targetType == typeof(int)) return Convert.ToInt32(value, CultureInfo.InvariantCulture);
+            if (targetType == typeof(long)) return Convert.ToInt64(value, CultureInfo.InvariantCulture);
             if (targetType == typeof(string)) return value.ToString();
         }
         if (value is bool flag && targetType == typeof(string)) return flag.ToString();
@@ -404,10 +405,7 @@ public static class CodeActions
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";
@@ -497,8 +495,8 @@ public static class CodeActions
                 return sb.ToString();
             }
             foreach (var (i, title, _) in actions)
-                sb.AppendLine($"{i}\t{title}");
-            sb.AppendLine().AppendLine($"Total: {actions.Count}. Use roslyn_apply_code_action with action_index (0-based). For code fixes, optional fix_all_scope: document | project | solution.");
+                sb.AppendLineInvariant($"{i}\t{title}");
+            sb.AppendLine().AppendLineInvariant($"Total: {actions.Count}. Use roslyn_apply_code_action with action_index (0-based). For code fixes, optional fix_all_scope: document | project | solution.");
             return sb.ToString();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("slnx") || ex.Message.Contains("Slnx"))
@@ -534,10 +532,7 @@ public static class CodeActions
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";

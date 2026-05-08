@@ -144,7 +144,7 @@ public static class ToolHandlers
     }
 
     /// <summary>Парсит action_options из args: JSON object → Dictionary (string, int, bool, string[]).</summary>
-    private static IReadOnlyDictionary<string, object?>? TryGetActionOptions(IReadOnlyDictionary<string, JsonElement> args)
+    private static Dictionary<string, object?>? TryGetActionOptions(IReadOnlyDictionary<string, JsonElement> args)
     {
         if (!args.TryGetValue("action_options", out var el) || el.ValueKind != JsonValueKind.Object)
             return null;
@@ -166,7 +166,7 @@ public static class ToolHandlers
         return dict.Count == 0 ? null : dict;
     }
 
-    private static object? GetStringArray(JsonElement arr)
+    private static string[]? GetStringArray(JsonElement arr)
     {
         var list = new List<string>();
         foreach (var item in arr.EnumerateArray())
@@ -223,7 +223,7 @@ public static class ToolHandlers
             ct);
     }
 
-    private static IReadOnlyList<string>? TryGetOptionalStringList(IReadOnlyDictionary<string, JsonElement> args, string key)
+    private static string[]? TryGetOptionalStringList(IReadOnlyDictionary<string, JsonElement> args, string key)
     {
         if (!args.TryGetValue(key, out var el) || el.ValueKind != JsonValueKind.Array)
             return null;

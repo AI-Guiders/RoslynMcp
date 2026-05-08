@@ -91,10 +91,7 @@ public static class RenameSymbol
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";
@@ -140,8 +137,8 @@ public static class RenameSymbol
 
             var sb = new StringBuilder();
             var docPath = document.FilePath ?? filePath;
-            sb.AppendLine($"# Document: {docPath} (total_lines={lines.Count}, line_{line}_length={lineLen})");
-            sb.AppendLine($"# Rename {symbol.Kind} {oldTypeName} → {newName}");
+            sb.AppendLineInvariant($"# Document: {docPath} (total_lines={lines.Count}, line_{line}_length={lineLen})");
+            sb.AppendLineInvariant($"# Rename {symbol.Kind} {oldTypeName} → {newName}");
             sb.AppendLine();
 
             var changed = new List<Document>();
@@ -198,7 +195,7 @@ public static class RenameSymbol
                         {
                             sb.AppendLine("# rename_partial_type_files (disk path renames after symbol rename):");
                             foreach (var (o, n) in partialRenames)
-                                sb.AppendLine($"  {o} → {n}");
+                                sb.AppendLineInvariant($"  {o} → {n}");
                             sb.AppendLine();
                         }
                     }
@@ -241,35 +238,35 @@ public static class RenameSymbol
                         {
                             if (!File.Exists(oldPath) && File.Exists(newPath))
                             {
-                                sb.AppendLine($"  (already at target, skip) {newPath}");
+                                sb.AppendLineInvariant($"  (already at target, skip) {newPath}");
                                 continue;
                             }
 
                             if (!File.Exists(oldPath))
                             {
-                                sb.AppendLine($"  Warning: source missing, skip: {oldPath}");
+                                sb.AppendLineInvariant($"  Warning: source missing, skip: {oldPath}");
                                 continue;
                             }
 
                             if (File.Exists(newPath))
                             {
-                                sb.AppendLine($"  Error: target exists: {newPath}");
+                                sb.AppendLineInvariant($"  Error: target exists: {newPath}");
                                 continue;
                             }
 
                             File.Move(oldPath, newPath);
-                            sb.AppendLine($"  {oldPath} → {newPath}");
+                            sb.AppendLineInvariant($"  {oldPath} → {newPath}");
                         }
                         catch (Exception ex)
                         {
-                            sb.AppendLine($"  Error ({oldPath}): {ex.Message}");
+                            sb.AppendLineInvariant($"  Error ({oldPath}): {ex.Message}");
                         }
                     }
                 }
             }
             else
             {
-                sb.AppendLine().AppendLine($"Total: {changed.Count} file(s). Call with apply: true to write.");
+                sb.AppendLine().AppendLineInvariant($"Total: {changed.Count} file(s). Call with apply: true to write.");
             }
 
             return sb.ToString();

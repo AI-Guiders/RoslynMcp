@@ -82,10 +82,7 @@ public static class ResolveBreakpoint
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";
@@ -151,11 +148,11 @@ public static class ResolveBreakpoint
 
             var sb = new StringBuilder();
             sb.AppendLine("# Breakpoint location(s) — first executable line of symbol");
-            sb.AppendLine($"# Symbol: \"{name}\" in {docPath}");
+            sb.AppendLineInvariant($"# Symbol: \"{name}\" in {docPath}");
             sb.AppendLine();
             foreach (var (kind, line) in results.Distinct().OrderBy(t => t.line))
-                sb.AppendLine($"{docPath}:{line}\t({kind})");
-            sb.AppendLine().AppendLine($"Total: {results.Count} location(s). Use file:line to set breakpoint.");
+                sb.AppendLineInvariant($"{docPath}:{line}\t({kind})");
+            sb.AppendLine().AppendLineInvariant($"Total: {results.Count} location(s). Use file:line to set breakpoint.");
             return sb.ToString();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("slnx") || ex.Message.Contains("Slnx"))

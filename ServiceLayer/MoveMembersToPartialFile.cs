@@ -51,11 +51,9 @@ public static class MoveMembersToPartialFile
         try
         {
             workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            Solution solution;
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            var solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
+            if (solution is null)
+                return "Error: failed to open solution.";
 
             var document = solution.Projects
                 .SelectMany(p => p.Documents)
@@ -124,17 +122,18 @@ public static class MoveMembersToPartialFile
 
             var fileScopedNs = IsDeclaredInFileScopedNamespace(typeDecl);
             var newTypePart = EnsurePartialKeyword(CloneTypeShellWithMembers(typeDecl, toMove));
-            var remainingType = EnsurePartialKeyword(typeDecl.RemoveNodes(toMove, SyntaxRemoveOptions.KeepEndOfLine));
+            var remainingAfterRemove = typeDecl.RemoveNodes(toMove, SyntaxRemoveOptions.KeepEndOfLine) ?? typeDecl;
+            var remainingType = EnsurePartialKeyword(remainingAfterRemove);
 
             var newFileText = BuildPartialPartFileText(compilationUnit, newTypePart, typeSymbol, fileScopedNs);
             var modifiedRoot = root.ReplaceNode(typeDecl, remainingType);
             var modifiedText = modifiedRoot.GetText();
 
             var sb = new StringBuilder();
-            sb.AppendLine($"# Type: {typeSymbol.ToDisplayString()}");
-            sb.AppendLine($"# Members moved: {toMove.Count} ({string.Join(", ", toMove.Select(GetMemberLabel))})");
-            sb.AppendLine($"# Output: {outPath}");
-            sb.AppendLine($"# Source updated: {filePath}");
+            sb.AppendLineInvariant($"# Type: {typeSymbol.ToDisplayString()}");
+            sb.AppendLineInvariant($"# Members moved: {toMove.Count} ({string.Join(", ", toMove.Select(GetMemberLabel))})");
+            sb.AppendLineInvariant($"# Output: {outPath}");
+            sb.AppendLineInvariant($"# Source updated: {filePath}");
             sb.AppendLine(apply ? "# apply: true — writing files." : "# apply: false — preview only. Pass apply: true to write.");
             sb.AppendLine();
 
@@ -166,7 +165,7 @@ public static class MoveMembersToPartialFile
                     var fullProj = Path.GetFullPath(projDir);
                     var fullOut = Path.GetFullPath(outDir);
                     if (!fullOut.StartsWith(fullProj, Environment.OSVersion.Platform == PlatformID.Win32NT ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                        sb.AppendLine($"# Warning: output path is outside project directory ({fullProj}). SDK glob may not include the file; prefer a path under the project.");
+                        sb.AppendLineInvariant($"# Warning: output path is outside project directory ({fullProj}). SDK glob may not include the file; prefer a path under the project.");
                 }
             }
 
@@ -191,13 +190,13 @@ public static class MoveMembersToPartialFile
                 {
                     var childRelApply = Path.GetRelativePath(projDirApply, outPath).Replace('/', Path.DirectorySeparatorChar);
                     var stripMsg = DependentUponCsproj.TryRemoveRedundantSdkCompileInclude(csprojPathApply, childRelApply);
-                    sb.AppendLine($"# Sdk Compile: {stripMsg}");
+                    sb.AppendLineInvariant($"# Sdk Compile: {stripMsg}");
 
                     if (addDependentUpon)
                     {
                         var depVal = DependentUponCsproj.ComputeDependentUponValue(projDirApply, outPath, targetPath);
                         var depMsg = DependentUponCsproj.AddOrUpdateDependentUpon(csprojPathApply, childRelApply, depVal, dryRun: false);
-                        sb.AppendLine($"# DependentUpon: {depMsg}");
+                        sb.AppendLineInvariant($"# DependentUpon: {depMsg}");
                     }
                 }
             }
@@ -229,7 +228,7 @@ public static class MoveMembersToPartialFile
         _ => m.Kind().ToString()
     };
 
-    private static IEnumerable<string> GetRelativeFolderSegments(string? projectFilePath, string documentFullPath)
+    private static string[] GetRelativeFolderSegments(string? projectFilePath, string documentFullPath)
     {
         if (string.IsNullOrEmpty(projectFilePath))
             return [];

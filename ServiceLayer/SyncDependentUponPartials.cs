@@ -35,14 +35,12 @@ public static class SyncDependentUponPartials
         try
         {
             workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            Microsoft.CodeAnalysis.Solution solution;
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            var solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
+            if (solution is null)
+                return "Error: failed to open solution.";
 
             var sb = new StringBuilder();
-            sb.AppendLine($"# DependentUpon sync (dry_run={dryRun})");
+            sb.AppendLineInvariant($"# DependentUpon sync (dry_run={dryRun})");
             sb.AppendLine();
 
             foreach (var project in solution.Projects)
@@ -58,7 +56,7 @@ public static class SyncDependentUponPartials
                 if (string.IsNullOrEmpty(projDir))
                     continue;
 
-                sb.AppendLine($"## Project: {csproj}");
+                sb.AppendLineInvariant($"## Project: {csproj}");
                 ProcessProject(csproj, projDir, dryRun, sb, cancellationToken);
                 sb.AppendLine();
             }
@@ -139,6 +137,6 @@ public static class SyncDependentUponPartials
         var batchLog = new StringBuilder();
         var summary = DependentUponCsproj.ApplyBatch(csprojPath, deduped, dryRun, batchLog);
         log.Append(batchLog);
-        log.AppendLine($"  {summary}");
+        log.AppendLineInvariant($"  {summary}");
     }
 }

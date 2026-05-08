@@ -34,10 +34,7 @@ public static class FindUsages
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";
@@ -79,15 +76,15 @@ public static class FindUsages
             var refs = await SymbolFinder.FindReferencesAsync(symbol, solution, cancellationToken).ConfigureAwait(false);
             var sb = new StringBuilder();
             var docPath = document.FilePath ?? filePath;
-            sb.AppendLine($"# Document: {docPath} (total_lines={lines.Count}, line_{line}_length={lineLen})");
-            sb.AppendLine($"# References to {symbol.Kind} {symbol.Name}");
-            sb.AppendLine($"# Qualified: {symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}");
+            sb.AppendLineInvariant($"# Document: {docPath} (total_lines={lines.Count}, line_{line}_length={lineLen})");
+            sb.AppendLineInvariant($"# References to {symbol.Kind} {symbol.Name}");
+            sb.AppendLineInvariant($"# Qualified: {symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}");
             sb.AppendLine();
             foreach (var loc in symbol.Locations)
             {
                 if (loc.SourceTree is null) continue;
                 var span = loc.GetLineSpan();
-                sb.AppendLine($"Definition: {loc.SourceTree.FilePath}:{span.StartLinePosition.Line + 1}:{span.StartLinePosition.Character + 1}");
+                sb.AppendLineInvariant($"Definition: {loc.SourceTree.FilePath}:{span.StartLinePosition.Line + 1}:{span.StartLinePosition.Character + 1}");
             }
             sb.AppendLine();
             foreach (var refLoc in refs.SelectMany(r => r.Locations))
@@ -95,13 +92,13 @@ public static class FindUsages
                 var loc = refLoc.Location;
                 if (loc.SourceTree is null) continue;
                 var span = loc.GetLineSpan();
-                sb.AppendLine($"{loc.SourceTree.FilePath}:{span.StartLinePosition.Line + 1}:{span.StartLinePosition.Character + 1}");
+                sb.AppendLineInvariant($"{loc.SourceTree.FilePath}:{span.StartLinePosition.Line + 1}:{span.StartLinePosition.Character + 1}");
             }
             var count = refs.Sum(r => r.Locations.Count(l => l.Location.SourceTree != null));
             if (count == 0)
                 sb.AppendLine("(no references found)");
             else
-                sb.AppendLine().AppendLine($"Total: {count} reference(s)");
+                sb.AppendLine().AppendLineInvariant($"Total: {count} reference(s)");
             return sb.ToString();
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("slnx") || ex.Message.Contains("Slnx"))

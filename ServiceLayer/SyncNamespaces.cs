@@ -65,18 +65,15 @@ public static class SyncNamespaces
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";
 
             var sb = new StringBuilder();
             sb.AppendLine("# Sync namespaces to folder structure");
-            sb.AppendLine($"# Path: {solutionOrProjectPath}");
-            sb.AppendLine($"# Mode: {(dryRun ? "dry run (no writes)" : "apply")}");
+            sb.AppendLineInvariant($"# Path: {solutionOrProjectPath}");
+            sb.AppendLineInvariant($"# Mode: {(dryRun ? "dry run (no writes)" : "apply")}");
             sb.AppendLine();
 
             var allChanges = new List<(DocumentId docId, string filePath, string oldNs, string newNs)>();
@@ -128,9 +125,9 @@ public static class SyncNamespaces
             }
 
             foreach (var (_, filePath, oldNs, newNs) in allChanges)
-                sb.AppendLine($"{filePath}: \"{oldNs}\" → \"{newNs}\"");
+                sb.AppendLineInvariant($"{filePath}: \"{oldNs}\" → \"{newNs}\"");
             sb.AppendLine();
-            sb.AppendLine($"Total: {allChanges.Count} file(s) to update.");
+            sb.AppendLineInvariant($"Total: {allChanges.Count} file(s) to update.");
 
             if (dryRun)
             {

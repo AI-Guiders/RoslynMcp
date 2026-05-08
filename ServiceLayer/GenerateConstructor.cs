@@ -43,10 +43,7 @@ public static class GenerateConstructor
         try
         {
             var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-            if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".sln", StringComparison.OrdinalIgnoreCase))
-                solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-            else
-                solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+            solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
             if (solution is null)
                 return "Error: failed to open solution.";
@@ -174,7 +171,7 @@ public static class GenerateConstructor
     /// <summary>Поле считается backing для свойства, если есть свойство с тем же именем без ведущего '_' (например _source → Source).</summary>
     private static bool IsBackingFieldForProperty(string fieldName, HashSet<string> propertyNames)
     {
-        if (string.IsNullOrEmpty(fieldName) || !fieldName.StartsWith("_", StringComparison.Ordinal))
+        if (string.IsNullOrEmpty(fieldName) || fieldName[0] != '_')
             return false;
         var withoutUnderscore = fieldName[1..];
         if (withoutUnderscore.Length == 0)
@@ -187,7 +184,7 @@ public static class GenerateConstructor
     {
         if (string.IsNullOrEmpty(name)) return name;
         if (name.Length == 1) return name.ToLowerInvariant();
-        if (name.StartsWith("_", StringComparison.Ordinal))
+        if (name[0] == '_')
             name = name.Length > 1 ? name[1..] : name;
         return char.ToLowerInvariant(name[0]) + name[1..];
     }

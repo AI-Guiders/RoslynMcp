@@ -5,6 +5,16 @@ namespace RoslynMcp.Mcp;
 /// <summary>JSON-схемы параметров инструментов MCP.</summary>
 public static class ToolSchemas
 {
+    private static readonly string[] RequiredFilePath = ["file_path"];
+    private static readonly string[] RequiredFilePathLineColumn = ["file_path", "line", "column"];
+    private static readonly string[] RequiredSolutionFilePathLineColumn = ["solution_or_project_path", "file_path", "line", "column"];
+    private static readonly string[] RequiredSolutionFilePathLineColumnNewName = ["solution_or_project_path", "file_path", "line", "column", "new_name"];
+    private static readonly string[] RequiredSolutionFilePathLineColumnActionIndex = ["solution_or_project_path", "file_path", "line", "column", "action_index"];
+    private static readonly string[] RequiredSolutionOrProjectPath = ["solution_or_project_path"];
+    private static readonly string[] RequiredSolutionFilePathLineColumnMemberNamesOutPath = ["solution_or_project_path", "file_path", "line", "column", "member_names", "output_file_path"];
+    private static readonly string[] RequiredSolutionFilePathMode = ["solution_or_project_path", "file_path", "mode"];
+    private static readonly string[] RequiredSolutionFilePathSymbolName = ["solution_or_project_path", "file_path", "symbol_name"];
+
     private static JsonElement ToElement(object schema) =>
         JsonSerializer.SerializeToElement(schema);
 
@@ -19,7 +29,7 @@ public static class ToolSchemas
             {
                 file_path = new { type = "string", description = "Путь к .cs файлу." }
             },
-            required = new[] { "file_path" }
+            required = RequiredFilePath
         });
 
     public static JsonElement GetSymbolAtPosition() =>
@@ -33,7 +43,7 @@ public static class ToolSchemas
                 column = new { type = "integer", description = "Номер столбца (1-based)." },
                 solution_or_project_path = new { type = "string", description = "Опционально: путь к .sln или .csproj — тогда в ответе будет Qualified (полное имя символа)." }
             },
-            required = new[] { "file_path", "line", "column" }
+            required = RequiredFilePathLineColumn
         });
 
     public static JsonElement FindUsages() =>
@@ -47,7 +57,7 @@ public static class ToolSchemas
                 line = new { type = "integer", description = "Строка (1-based). Позиция на идентификаторе символа (имя метода/класса/свойства), не на типе — иначе найдёт ссылки на тип." },
                 column = new { type = "integer", description = "Столбец (1-based)." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement GoToDefinition() =>
@@ -61,7 +71,7 @@ public static class ToolSchemas
                 line = new { type = "integer", description = "Строка (1-based), позиция на идентификаторе символа." },
                 column = new { type = "integer", description = "Столбец (1-based)." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement Rename() =>
@@ -82,7 +92,7 @@ public static class ToolSchemas
                 rename_file = new { type = "boolean", description = "Для типа — переименовать файл с объявлением (как в VS)." },
                 rename_partial_type_files = new { type = "boolean", description = "После переименования топ-уровневого class/struct/interface: переименовать на диске все TypeName.cs и TypeName.*.cs в проекте в NewName.cs / NewName.*.cs (partial). После записи текста Roslyn." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column", "new_name" }
+            required = RequiredSolutionFilePathLineColumnNewName
         });
 
     public static JsonElement GetCodeActions() =>
@@ -98,7 +108,7 @@ public static class ToolSchemas
                 end_line = new { type = "integer", description = "Опционально. Строка конца выделения (1-based). Если заданы end_line и end_column — refactoring получает диапазон (например Extract method / Extract local function)." },
                 end_column = new { type = "integer", description = "Опционально. Столбец конца выделения (1-based). Задавать вместе с end_line." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement ApplyCodeAction() =>
@@ -118,7 +128,7 @@ public static class ToolSchemas
                 constant_name = new { type = "string", description = "Опционально. Имя константы для действий с опциями (например Introduce constant). Если не задано, провайдер использует значение по умолчанию (например V)." },
                 action_options = new { type = "object", description = "Опционально. JSON-объект опций для действий с диалогом (Extract interface, Extract base class и т.д.): ключи — имена свойств типа опций, значения — строки, числа, bool или массив строк (например member_names). См. REFACTORINGS.md." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column", "action_index" }
+            required = RequiredSolutionFilePathLineColumnActionIndex
         });
 
     public static JsonElement GetDiagnostics() =>
@@ -130,7 +140,7 @@ public static class ToolSchemas
                 solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj. Предпочтительный способ проверки C# кода (неиспользуемые переменные, предупреждения) — вызывать этот тул вместо опоры только на ReadLints." },
                 file_path = new { type = "string", description = "Опционально. Путь к .cs файлу — тогда только диагностики этого файла. Иначе — по всему решению/проекту." }
             },
-            required = new[] { "solution_or_project_path" }
+            required = RequiredSolutionOrProjectPath
         });
 
     public static JsonElement GetSolutionStructure() =>
@@ -141,7 +151,7 @@ public static class ToolSchemas
             {
                 solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj. Если в репо только .slnx (формат не поддерживается): передай путь к главному .csproj (например UI или стартовый проект) — вернётся список всех подгруженных проектов (включая ссылки). Иначе: список проектов (имя и путь к .csproj) для передачи в остальные тулы." }
             },
-            required = new[] { "solution_or_project_path" }
+            required = RequiredSolutionOrProjectPath
         });
 
     public static JsonElement WorkspaceNavigationContext() =>
@@ -162,7 +172,7 @@ public static class ToolSchemas
                 exclude_kinds = new { type = "array", items = new { type = "string" }, description = "Опционально. Исключаемые виды; с пресетом объединяется по правилам merge." },
                 preset = new { type = "string", description = "Опционально. Встроенный пресет (имена как в Cascade IDE: peers_only, no_namespace_noise, tests_and_peers, structure_only). Без .cascade/workspace.toml — только эти id." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "mode" }
+            required = RequiredSolutionFilePathMode
         });
 
     public static JsonElement SyncNamespaces() =>
@@ -175,7 +185,7 @@ public static class ToolSchemas
                 project_path = new { type = "string", description = "Опционально. Для solution с несколькими проектами — путь к .csproj, чтобы синхронизировать только этот проект." },
                 dry_run = new { type = "boolean", description = "Опционально. true — только отчёт о планируемых изменениях, без записи. Рекомендуется сначала dry_run, затем без dry_run для применения." }
             },
-            required = new[] { "solution_or_project_path" }
+            required = RequiredSolutionOrProjectPath
         });
 
     public static JsonElement ResolveBreakpoint() =>
@@ -188,7 +198,7 @@ public static class ToolSchemas
                 file_path = new { type = "string", description = "Путь к .cs файлу, в котором искать символ." },
                 symbol_name = new { type = "string", description = "Имя символа: метод, конструктор, свойство. Для индексатора передать \"this\". Возвращается file:line первой исполняемой строки (место для брейкпоинта)." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "symbol_name" }
+            required = RequiredSolutionFilePathSymbolName
         });
 
     public static JsonElement GenerateInterfaceFromClass() =>
@@ -205,7 +215,7 @@ public static class ToolSchemas
                 output_file_path = new { type = "string", description = "Опционально. Путь к .cs файлу для записи интерфейса. Иначе возвращается только текст." },
                 member_names = new { type = "array", items = new { type = "string" }, description = "Опционально. Массив имён методов/свойств для включения в интерфейс. Если не задан — все public instance методы и свойства." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement GenerateBaseClassFromClass() =>
@@ -222,7 +232,7 @@ public static class ToolSchemas
                 output_file_path = new { type = "string", description = "Опционально. Путь к .cs файлу для записи. Иначе возвращается только текст." },
                 member_names = new { type = "array", items = new { type = "string" }, description = "Опционально. Массив имён методов/свойств/событий для переноса в базовый класс как abstract. Если не задан — все public instance." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement GenerateOverrides() =>
@@ -238,7 +248,7 @@ public static class ToolSchemas
                 member_names = new { type = "array", items = new { type = "string" }, description = "Опционально. Массив имён методов/свойств/событий базового типа для генерации override. Если не задан — все виртуальные/абстрактные, ещё не переопределённые." },
                 insert_into_file = new { type = "boolean", description = "Опционально. true — вставить сгенерированные override в тело класса перед закрывающей скобкой; false (по умолчанию) — только вернуть текст для вставки вручную." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement GenerateConstructorFromMembers() =>
@@ -254,7 +264,7 @@ public static class ToolSchemas
                 member_names = new { type = "array", items = new { type = "string" }, description = "Опционально. Массив имён полей/свойств (с сеттером) для параметров конструктора и присвоений. Если не задан — все instance поля и свойства с set." },
                 insert_into_file = new { type = "boolean", description = "Опционально. true — вставить конструктор в тело класса; false (по умолчанию) — только вернуть текст." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement GenerateEqualsGetHashCode() =>
@@ -270,7 +280,7 @@ public static class ToolSchemas
                 member_names = new { type = "array", items = new { type = "string" }, description = "Опционально. Массив имён полей/свойств для сравнения в Equals и GetHashCode. Если не задан — все instance поля и свойства." },
                 insert_into_file = new { type = "boolean", description = "Опционально. true — вставить Equals/GetHashCode в тело класса; false (по умолчанию) — только вернуть текст." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column" }
+            required = RequiredSolutionFilePathLineColumn
         });
 
     public static JsonElement MoveMembersToPartialFile() =>
@@ -288,7 +298,7 @@ public static class ToolSchemas
                 apply = new { type = "boolean", description = "false — только превью текста; true — записать изменения и добавить файл в проект (TryApplyChanges)." },
                 add_dependent_upon = new { type = "boolean", description = "Опционально. После apply: true (по умолчанию) — добавить в .csproj Compile Update с DependentUpon на исходный файл; false — не трогать .csproj." }
             },
-            required = new[] { "solution_or_project_path", "file_path", "line", "column", "member_names", "output_file_path" }
+            required = RequiredSolutionFilePathLineColumnMemberNamesOutPath
         });
 
     public static JsonElement SyncDependentUponPartials() =>
@@ -301,6 +311,6 @@ public static class ToolSchemas
                 project_path = new { type = "string", description = "Опционально. Полный путь к одному .csproj — только этот проект." },
                 dry_run = new { type = "boolean", description = "true — только отчёт; false — записать .csproj." }
             },
-            required = new[] { "solution_or_project_path" }
+            required = RequiredSolutionOrProjectPath
         });
 }

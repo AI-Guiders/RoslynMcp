@@ -13,7 +13,7 @@ public static class SyntheticRenameTest
 public class SyntheticRenameTarget
 {
     public static int StaticValue => 1;
-    public int Value => 2;
+    public int Value { get; } = 2;
 }
 
 /// <summary>Пример для теста roslyn_resolve_breakpoint: конструктор и индексатор.</summary>

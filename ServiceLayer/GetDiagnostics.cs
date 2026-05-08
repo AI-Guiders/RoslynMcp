@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.CodeAnalysis;
@@ -72,7 +73,7 @@ public static class GetDiagnostics
     }
 
     /// <summary>Парсит .slnx: возвращает полные пути к .csproj (относительные пути разрешаются от каталога slnx).</summary>
-    private static IReadOnlyList<string> GetProjectPathsFromSlnx(string slnxPath)
+    private static List<string> GetProjectPathsFromSlnx(string slnxPath)
     {
         var dir = Path.GetDirectoryName(slnxPath) ?? "";
         var xml = XDocument.Load(slnxPath);
@@ -193,7 +194,7 @@ public static class GetDiagnostics
                 var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
                 try
                 {
-                    var solution = (await workspace.OpenProjectAsync(projectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+                    var solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, projectPath, cancellationToken).ConfigureAwait(false);
                     if (solution is not null)
                     {
                         var (t, n, s) = await CollectDiagnosticsFromSolution(workspace, solution, targetPath, allDiagnostics, cancellationToken).ConfigureAwait(false);
@@ -214,10 +215,7 @@ public static class GetDiagnostics
             try
             {
                 var workspace = MSBuildWorkspace.Create(RoslynMcpWorkspaceProperties.MsBuild);
-                if (string.Equals(ext, ".sln", StringComparison.OrdinalIgnoreCase))
-                    solution = await workspace.OpenSolutionAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false);
-                else
-                    solution = (await workspace.OpenProjectAsync(solutionOrProjectPath, cancellationToken: cancellationToken).ConfigureAwait(false)).Solution;
+                solution = await WorkspaceOpen.OpenSolutionOrProjectAsync(workspace, solutionOrProjectPath, cancellationToken).ConfigureAwait(false);
 
                 if (solution is null)
                     return "Error: failed to open solution.";
@@ -236,11 +234,11 @@ public static class GetDiagnostics
         var sb = new StringBuilder();
             sb.AppendLine("# Diagnostics (compiler + analyzers)");
             if (string.Equals(Path.GetExtension(solutionOrProjectPath), ".slnx", StringComparison.OrdinalIgnoreCase))
-                sb.AppendLine($"# Solution: {solutionOrProjectPath}");
+                sb.AppendLineInvariant($"# Solution: {solutionOrProjectPath}");
             sb.AppendLine("# Filtered by .editorconfig (severity = none) and CompilationOptions (Suppress); severity = effective (incl. TreatWarningsAsErrors).");
-            sb.AppendLine($"# Total (after path filter): {totalAfterPath}; excluded: severity=none {excludedSeverityNone}, Suppress {excludedSuppress}; shown: {allDiagnostics.Count}");
+            sb.AppendLineInvariant($"# Total (after path filter): {totalAfterPath}; excluded: severity=none {excludedSeverityNone}, Suppress {excludedSuppress}; shown: {allDiagnostics.Count}");
             if (targetPath is not null)
-                sb.AppendLine($"# File: {filePath}");
+                sb.AppendLineInvariant($"# File: {filePath}");
             sb.AppendLine("# Format: file:line:column severity id — message");
             sb.AppendLine();
 
@@ -264,7 +262,7 @@ public static class GetDiagnostics
                     DiagnosticSeverity.Hidden => "hidden",
                     _ => "unknown"
                 };
-                sb.AppendLine($"{file}:{line}:{column} {severityStr} {d.Id} — {d.GetMessage()}");
+                sb.AppendLineInvariant($"{file}:{line}:{column} {severityStr} {d.Id} — {d.GetMessage(CultureInfo.InvariantCulture)}");
             }
 
             sb.AppendLine();
@@ -274,7 +272,7 @@ public static class GetDiagnostics
             if (allDiagnostics.Count == 0)
                 sb.AppendLine("(no diagnostics)");
             else
-                sb.AppendLine($"Total: {allDiagnostics.Count}");
+                sb.AppendLineInvariant($"Total: {allDiagnostics.Count}");
 
             return sb.ToString();
     }

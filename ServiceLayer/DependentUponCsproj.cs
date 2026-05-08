@@ -164,7 +164,7 @@ public static class DependentUponCsproj
             var line = ApplyMergeToDocument(doc, rootNs, updateNorm, depTrim, dryRun, ref changed);
             if (line.StartsWith("# No change", StringComparison.Ordinal))
                 noops++;
-            logLines?.AppendLine($"  {line}");
+            logLines?.AppendLineInvariant($"  {line}");
         }
 
         if (!dryRun && changed)

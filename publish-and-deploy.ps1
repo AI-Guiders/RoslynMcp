@@ -29,6 +29,14 @@ try {
     }
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+    # Microsoft.CodeAnalysis.Workspaces.MSBuild 4.9+: out-of-process BuildHost must sit next to the exe.
+    # aid-publish mirrors the full publish tree — if BuildHost-netcore was ever missing here, MCP failed at roslyn_* with "build host could not be found".
+    $buildHostDll = Join-Path $Target "BuildHost-netcore\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll"
+    if (-not (Test-Path -LiteralPath $buildHostDll)) {
+        Write-Error "Publish incomplete: MSBuild Workspace BuildHost missing: $buildHostdll`nRun dotnet publish manually with -r win-x64 --self-contained true or fix aid-publish / SDK output.`n(Optional on aid-publish 0.1.2+: -RequireMirrorFile BuildHost-netcore/Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll)"
+        exit 1
+    }
+
     $exe = Join-Path $Target "RoslynMcp.exe"
     $exeJson = $exe.Replace('\', '\\')
     Write-Host ""

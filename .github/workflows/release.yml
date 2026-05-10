@@ -1,0 +1,47 @@
+# Self-contained публикация на тег v* и ручной запуск. Артефакты: ZIP на RID + SHA256SUMS.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  RELEASE_RIDS: 'win-x64 linux-x64 osx-x64 osx-arm64'
+  PROJECT: RoslynMcp.csproj
+  ARTIFACT_PREFIX: RoslynMcp
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish (self-contained) per RID
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for rid in ${{ env.RELEASE_RIDS }}; do
+            out="publish/${rid}"
+            dotnet publish "$PROJECT" -c Release -r "$rid" --self-contained true -o "$out"
+            (cd "$out" && zip -r "../../dist/${ARTIFACT_PREFIX}-${GITHUB_REF_NAME}-${rid}.zip" .)
+          done
+          (cd dist && sha256sum *.zip > SHA256SUMS)
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/SHA256SUMS
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

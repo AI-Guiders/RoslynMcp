@@ -2,6 +2,8 @@
 
 MCP-сервер для помощи агенту при рефакторинге C#: доступ к **Roslyn** (синтаксические деревья, семантика, символы, find usages, rename, code actions). Цель — стабильный тул без глюков (альтернатива Bifrost).
 
+**Cursor:** примеры `.cursor/rules` для копипаста — **[docs/cursor-rules-examples.md](docs/cursor-rules-examples.md)**.
+
 **Текущий статус:** работают `roslyn_ping`, `roslyn_get_document_symbols`, `roslyn_get_symbol_at_position`, `roslyn_find_usages`, `roslyn_go_to_definition`, `roslyn_rename`, `roslyn_get_code_actions`, `roslyn_apply_code_action`, `roslyn_get_diagnostics`, `roslyn_get_workspace_navigation_context` (эвристики «связанных файлов» по MSBuild solution; не эквивалентно дереву файлов Cascade IDE — см. описание тула).
 
 ## MSBuild workspace

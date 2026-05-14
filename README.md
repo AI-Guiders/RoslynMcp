@@ -46,10 +46,12 @@ dotnet run
 
 ### Быстрый локальный publish (рекомендуется)
 
-В репозитории есть `publish-and-deploy.ps1`: он прогоняет генерацию `mcp-tools.manifest.json` / `docs/MCP-TOOLS.md`, публикует self-contained `win-x64`, зеркалит в фиксированный путь (по умолчанию `D:\roslyn-mcp`) и гасит процесс, если он лочит файлы.
+В репозитории есть `publish-and-deploy.ps1`: он прогоняет генерацию `mcp-tools.manifest.json` / `docs/MCP-TOOLS.md`, публикует self-contained `win-x64`, зеркалит в фиксированный путь (по умолчанию `D:\roslyn-mcp`) и гасит процесс, если он лочит файлы. Скрипт проверяет наличие **`BuildHost-netcore\Microsoft.CodeAnalysis.Workspaces.MSBuild.BuildHost.dll`** рядом с `RoslynMcp.exe` — без этой папки MSBuildWorkspace в Cursor падает с *«build host could not be found»*.
 
 ```powershell
 .\publish-and-deploy.ps1
+# Если в mcp.json указан другой каталог (например D:\RoslynMcp):
+.\publish-and-deploy.ps1 -Target "D:\RoslynMcp"
 ```
 
 ### Релизы (zip + GitLab upload)

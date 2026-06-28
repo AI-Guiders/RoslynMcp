@@ -1,5 +1,7 @@
 # RoslynMcp
 
+MCP-сервер (stdio) — **тонкая обёртка** над библиотекой **[AIGuiders.RoslynMcp.Core](https://github.com/AI-Guiders/roslyn-mcp-core)** (`../roslyn-mcp-core`). Вся семантика Roslyn (code actions, rename, diagnostics) живёт в Core; этот репозиторий — MCP host + манифест тулов.
+
 MCP-сервер для помощи агенту при рефакторинге C#: доступ к **Roslyn** (синтаксические деревья, семантика, символы, find usages, rename, code actions). Цель — стабильный тул без глюков (альтернатива Bifrost).
 
 **Cursor:** примеры `.cursor/rules` для копипаста — **[docs/cursor-rules-examples.md](docs/cursor-rules-examples.md)**.

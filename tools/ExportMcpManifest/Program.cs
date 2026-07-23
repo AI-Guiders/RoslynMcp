@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ExportMcpManifest;
 using McpToolManifest;
+using RoslynMcp;
 using Tool = ModelContextProtocol.Protocol.Tool;
 
 // Regenerates mcp-tools.manifest.json and docs/MCP-TOOLS.md from ToolCatalog.

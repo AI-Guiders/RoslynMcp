@@ -40,6 +40,14 @@
 
 Применить выбранное code action по индексу из roslyn_get_code_actions. Параметры: solution_or_project_path, file_path, line, column, action_index (0-based).
 
+### `roslyn_format_document`
+
+In-proc format C# file via Roslyn Formatter. Returns StepResponse JSON (ok/kind/summary/data). apply=true writes; aggressive=NormalizeWhitespace+Format; optional span. Uses workspace/.editorconfig when available.
+
+### `roslyn_cleanup_document`
+
+Explicit Code Cleanup via dotnet format CLI (editorconfig + style/analyzers). Returns StepResponse JSON (ok/kind/summary/data). Not auto after Extract. Optional file_path; profile=whitespace|style|analyzers; apply=false dry-runs.
+
 ### `roslyn_get_diagnostics`
 
 Диагностики компиляции и анализаторов по solution/project (file:line:column, severity, id, message). Предпочтительно использовать вместо ReadLints/ручного просмотра для поиска неиспользуемых переменных (CS0219), предупреждений компилятора и анализаторов. Чтобы исправить: roslyn_get_code_actions по file:line:column из ответа, затем roslyn_apply_code_action (или fix_all_scope). Параметры: solution_or_project_path, опционально file_path.

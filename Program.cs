@@ -4,6 +4,7 @@ using Microsoft.Build.Locator;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using RoslynMcp;
 using RoslynMcp.Mcp;
 using Tool = ModelContextProtocol.Protocol.Tool;
 

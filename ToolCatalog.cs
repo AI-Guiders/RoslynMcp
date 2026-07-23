@@ -2,6 +2,8 @@ using ModelContextProtocol.Protocol;
 using RoslynMcp.Mcp;
 using Tool = ModelContextProtocol.Protocol.Tool;
 
+namespace RoslynMcp;
+
 /// <summary>Каталог MCP-тулов. Согласован с <c>mcp-tools.manifest.json</c> и <c>docs/MCP-TOOLS.md</c> (генерация: <c>tools/ExportMcpManifest</c>, тесты <c>RoslynMcp.Tests</c>).</summary>
 internal static class ToolCatalog
 {

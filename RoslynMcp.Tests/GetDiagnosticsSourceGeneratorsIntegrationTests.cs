@@ -72,7 +72,8 @@ public sealed class GetDiagnosticsSourceGeneratorsIntegrationTests
         var solutionPath = parts[0];
         var filePath = parts[1];
 
-        var text = await GetDiagnostics.GetDiagnosticsAsync(solutionPath, filePath, CancellationToken.None).ConfigureAwait(true);
+        var text = await GetDiagnostics.GetDiagnosticsAsync(
+            solutionPath, filePath, scope: "project", sourceText: null, CancellationToken.None).ConfigureAwait(true);
 
         Assert.False(text.StartsWith("Error:", StringComparison.OrdinalIgnoreCase), text);
         Assert.DoesNotContain("CS1061", text, StringComparison.Ordinal);

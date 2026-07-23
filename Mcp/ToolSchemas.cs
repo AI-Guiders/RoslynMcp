@@ -137,8 +137,10 @@ public static class ToolSchemas
             type = "object",
             properties = new
             {
-                solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj. Предпочтительный способ проверки C# кода (неиспользуемые переменные, предупреждения) — вызывать этот тул вместо опоры только на ReadLints." },
-                file_path = new { type = "string", description = "Опционально. Путь к .cs файлу — тогда только диагностики этого файла. Иначе — по всему решению/проекту." }
+                solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj." },
+                file_path = new { type = "string", description = "Опционально. Один .cs — по умолчанию scope=syntax (без MSBuild). Для semantic/analyzers: scope=project." },
+                scope = new { type = "string", description = "syntax|project. Default: file_path set → syntax; иначе project. project сериализует MSBuild open." },
+                source_text = new { type = "string", description = "Опционально для scope=syntax: текст буфера вместо диска." }
             },
             required = RequiredSolutionOrProjectPath
         });

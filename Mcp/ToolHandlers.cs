@@ -182,7 +182,9 @@ public static class ToolHandlers
         if (!TryGetString(args, "solution_or_project_path", out var solutionPath))
             throw new ArgumentException("solution_or_project_path (string) is required.");
         TryGetString(args, "file_path", out var filePath);
-        return GetDiagnostics.GetDiagnosticsAsync(solutionPath!, filePath, ct);
+        TryGetString(args, "scope", out var scope);
+        TryGetString(args, "source_text", out var sourceText);
+        return GetDiagnostics.GetDiagnosticsAsync(solutionPath!, filePath, scope, sourceText, ct);
     }
 
     private static Task<string> GetSolutionStructureAsync(IReadOnlyDictionary<string, JsonElement> args, CancellationToken ct)

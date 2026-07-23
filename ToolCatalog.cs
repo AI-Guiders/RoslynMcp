@@ -61,7 +61,7 @@ internal static class ToolCatalog
         {
             Name = "roslyn_get_diagnostics",
             Description =
-                "Диагностики компиляции и анализаторов по solution/project (file:line:column, severity, id, message). Предпочтительно использовать вместо ReadLints/ручного просмотра для поиска неиспользуемых переменных (CS0219), предупреждений компилятора и анализаторов. Чтобы исправить: roslyn_get_code_actions по file:line:column из ответа, затем roslyn_apply_code_action (или fix_all_scope). Параметры: solution_or_project_path, опционально file_path.",
+                "Диагностики C#. file_path без scope → syntax (ParseText, без MSBuild, parallel-safe). scope=project → MSBuild semantic+analyzers (serialized). Параметры: solution_or_project_path; file_path?; scope?; source_text?.",
             InputSchema = ToolSchemas.GetDiagnostics()
         },
         new()

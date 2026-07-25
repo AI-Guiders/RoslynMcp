@@ -22,6 +22,8 @@ public static class ToolHandlers
             "roslyn_get_code_actions" => GetCodeActionsAsync(args, cancellationToken),
             "roslyn_apply_code_action" => ApplyCodeActionAsync(args, cancellationToken),
             "roslyn_get_diagnostics" => GetDiagnosticsAsync(args, cancellationToken),
+            "roslyn_get_completions" => GetCompletionsAsync(args, cancellationToken),
+            "roslyn_get_signature_help" => GetSignatureHelpAsync(args, cancellationToken),
             "roslyn_get_solution_structure" => GetSolutionStructureAsync(args, cancellationToken),
             "roslyn_get_workspace_navigation_context" => GetWorkspaceNavigationContextAsync(args, cancellationToken),
             "roslyn_sync_namespaces" => SyncNamespacesAsync(args, cancellationToken),
@@ -185,6 +187,36 @@ public static class ToolHandlers
         TryGetString(args, "scope", out var scope);
         TryGetString(args, "source_text", out var sourceText);
         return GetDiagnostics.GetDiagnosticsAsync(solutionPath!, filePath, scope, sourceText, ct);
+    }
+
+    private static Task<string> GetCompletionsAsync(IReadOnlyDictionary<string, JsonElement> args, CancellationToken ct)
+    {
+        if (!TryGetString(args, "solution_or_project_path", out var solutionPath))
+            throw new ArgumentException("solution_or_project_path (string) is required.");
+        if (!TryGetString(args, "file_path", out var filePath))
+            throw new ArgumentException("file_path (string) is required.");
+        if (!TryGetInt(args, "line", out var line) || line < 1)
+            throw new ArgumentException("line (integer >= 1) is required.");
+        if (!TryGetInt(args, "column", out var column) || column < 1)
+            throw new ArgumentException("column (integer >= 1) is required.");
+        TryGetString(args, "prefix", out var prefix);
+        TryGetString(args, "source_text", out var sourceText);
+        var max = TryGetInt(args, "max", out var m) && m > 0 ? m : 40;
+        return GetCompletions.GetCompletionsAsync(solutionPath!, filePath!, line, column, prefix, max, sourceText, ct);
+    }
+
+    private static Task<string> GetSignatureHelpAsync(IReadOnlyDictionary<string, JsonElement> args, CancellationToken ct)
+    {
+        if (!TryGetString(args, "solution_or_project_path", out var solutionPath))
+            throw new ArgumentException("solution_or_project_path (string) is required.");
+        if (!TryGetString(args, "file_path", out var filePath))
+            throw new ArgumentException("file_path (string) is required.");
+        if (!TryGetInt(args, "line", out var line) || line < 1)
+            throw new ArgumentException("line (integer >= 1) is required.");
+        if (!TryGetInt(args, "column", out var column) || column < 1)
+            throw new ArgumentException("column (integer >= 1) is required.");
+        TryGetString(args, "source_text", out var sourceText);
+        return GetSignatureHelp.GetSignatureHelpAsync(solutionPath!, filePath!, line, column, sourceText, ct);
     }
 
     private static Task<string> GetSolutionStructureAsync(IReadOnlyDictionary<string, JsonElement> args, CancellationToken ct)

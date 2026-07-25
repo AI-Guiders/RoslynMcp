@@ -66,6 +66,20 @@ internal static class ToolCatalog
         },
         new()
         {
+            Name = "roslyn_get_completions",
+            Description =
+                "IntelliSense (Ctrl+Space): completions at caret with rendered XML docs tip (summary/params). solution_or_project_path, file_path, line, column; optional prefix, max, source_text.",
+            InputSchema = ToolSchemas.GetCompletions()
+        },
+        new()
+        {
+            Name = "roslyn_get_signature_help",
+            Description =
+                "Signature help inside a call: overloads + parameter docs (VS tip, text). solution_or_project_path, file_path, line, column; optional source_text.",
+            InputSchema = ToolSchemas.GetSignatureHelp()
+        },
+        new()
+        {
             Name = "roslyn_get_solution_structure",
             Description =
                 "Структура solution: список проектов (имя, путь к .csproj). Параметр: solution_or_project_path (.sln или .csproj). Обходной путь для реп с .slnx: передай путь к главному .csproj — вернётся полный список подгруженных проектов. Использовать, чтобы узнать состав решения и пути для остальных тулов.",

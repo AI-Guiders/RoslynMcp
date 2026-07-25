@@ -145,6 +145,38 @@ public static class ToolSchemas
             required = RequiredSolutionOrProjectPath
         });
 
+    public static JsonElement GetCompletions() =>
+        ToElement(new
+        {
+            type = "object",
+            properties = new
+            {
+                solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj." },
+                file_path = new { type = "string", description = "Путь к .cs файлу." },
+                line = new { type = "integer", description = "Каретка, 1-based." },
+                column = new { type = "integer", description = "Каретка, 1-based." },
+                prefix = new { type = "string", description = "Опциональный фильтр; иначе берётся префикс у каретки." },
+                max = new { type = "integer", description = "Cap items (default 40, max 80)." },
+                source_text = new { type = "string", description = "Опционально: текст буфера вместо диска." }
+            },
+            required = RequiredSolutionFilePathLineColumn
+        });
+
+    public static JsonElement GetSignatureHelp() =>
+        ToElement(new
+        {
+            type = "object",
+            properties = new
+            {
+                solution_or_project_path = new { type = "string", description = "Путь к .sln или .csproj." },
+                file_path = new { type = "string", description = "Путь к .cs файлу." },
+                line = new { type = "integer", description = "Внутри вызова, 1-based." },
+                column = new { type = "integer", description = "Внутри вызова, 1-based." },
+                source_text = new { type = "string", description = "Опционально: текст буфера вместо диска." }
+            },
+            required = RequiredSolutionFilePathLineColumn
+        });
+
     public static JsonElement GetSolutionStructure() =>
         ToElement(new
         {

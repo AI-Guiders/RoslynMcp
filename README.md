@@ -151,4 +151,4 @@ claude mcp add --transport stdio roslyn -- dotnet run --project .
 
 ## Лицензия
 
-MIT License. См. [LICENSE](LICENSE).
+Hippocratic License 2.1. См. [LICENSE](LICENSE).

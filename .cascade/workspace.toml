@@ -1,0 +1,22 @@
+# Roslyn MCP correspondence
+[workspace.adr]
+auto_include = "linked"
+max_related = 8
+root_dir = "docs"
+id_regex = '(?:^|/)docs/(?<id>[A-Za-z0-9][^/]*?)(?:\.md)?'
+
+[workspace.adr.map]
+"Mcp/" = ["docs/MCP-TOOLS.md", "README.md"]
+"ToolCatalog.cs" = ["docs/MCP-TOOLS.md"]
+"Program.cs" = ["docs/MCP-TOOLS.md", "README.md"]
+"RoslynMcp.Tests/" = ["docs/MCP-TOOLS.md", "REFACTORINGS.md"]
+"*" = ["docs/MCP-TOOLS.md", "README.md", "REFACTORINGS.md"]
+
+[workspace.features]
+[[workspace.features.feature]]
+id = "roslyn.mcp.tools"
+title = "Roslyn MCP tool surface"
+paths = ["Mcp/", "ToolCatalog.cs", "Program.cs"]
+docs = ["docs/MCP-TOOLS.md", "README.md"]
+tags = ["roslyn", "mcp"]
+

@@ -1,4 +1,4 @@
-# Roslyn MCP correspondence
+# Roslyn MCP correspondence + reverse anchors
 [workspace.adr]
 auto_include = "linked"
 max_related = 8
@@ -20,3 +20,20 @@ paths = ["Mcp/", "ToolCatalog.cs", "Program.cs"]
 docs = ["docs/MCP-TOOLS.md", "README.md"]
 tags = ["roslyn", "mcp"]
 
+[[workspace.correspondence.code_anchors]]
+doc = "docs/MCP-TOOLS.md"
+file = "ToolCatalog.cs"
+bracket = "F:ToolCatalog.cs; M:Build"
+kind = "documents"
+
+[[workspace.correspondence.code_anchors]]
+doc = "docs/MCP-TOOLS.md"
+file = "Program.cs"
+bracket = "F:Program.cs"
+kind = "documents"
+
+[[workspace.correspondence.code_anchors]]
+doc = "README.md"
+file = "Program.cs"
+bracket = "F:Program.cs"
+kind = "documents"

@@ -32,8 +32,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\roslyn-mcp-core\RoslynMcp.Core.csproj" Condition="Exists('..\roslyn-mcp-core\RoslynMcp.Core.csproj')" />
-    <PackageReference Include="AIGuiders.RoslynMcp.Core" Version="0.1.1" Condition="!Exists('..\roslyn-mcp-core\RoslynMcp.Core.csproj')" />
+    <ProjectReference Include="$(GuidersCoreRoot)\src\RoslynMcp.Core\RoslynMcp.Core.csproj" Condition="Exists('$(GuidersCoreRoot)\src\RoslynMcp.Core\RoslynMcp.Core.csproj')" />
+    <PackageReference Include="AIGuiders.RoslynMcp.Core" Version="0.1.1" Condition="!Exists('$(GuidersCoreRoot)\src\RoslynMcp.Core\RoslynMcp.Core.csproj')" />
   </ItemGroup>
 
   <ItemGroup>
